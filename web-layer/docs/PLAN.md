@@ -6,16 +6,18 @@ Phased roadmap. Status legend: `[ ]` todo · `[~]` in progress · `[x]` done · 
 
 ---
 
-## Phase 0 — Protect & clarify  *(mostly done this session)*
+## Phase 0 — Protect & clarify  *(done 2026-07-23)*
 
-- [x] **0.1** Commit Hermes' existing web work to `feat/web-layer` (protect from loss) — *done 2026-07-23*
-- [x] **0.2** Create this documentation hub (`web-layer/`) — *done 2026-07-23*
-- [x] **0.3** Add `upstream` remote (`refactoringhq/tolaria`) — *done 2026-07-23*
-- [x] **0.4** Lock architecture (alias-shim layer) in `ARCHITECTURE.md` — *done 2026-07-23*
-- [!] **0.5** Enable push from VPS → `totnormal/tolaria` *(blocked: deploy key is vault-only; need app-repo deploy key or PAT)* — see `README.md`
-- [ ] **0.6** Snapshot/backup the working tree once (cheap insurance) before refactoring
+- [x] **0.1** Commit Hermes' existing web work (protect from loss) — VPS branch `feat/web-layer` (local backup)
+- [x] **0.2** Create this documentation hub (`web-layer/`) — *pushed to origin/main @ `e3c9b281`*
+- [x] **0.3** Add `upstream` remote (`refactoringhq/tolaria`)
+- [x] **0.4** Lock architecture (alias-shim layer) in `ARCHITECTURE.md`
+- [x] **0.5** Enable push: deploy key `tolaria_app_ed25519` added to `totnormal/tolaria`; docs pushed. **Develop + push from the local Mac** (`~/Documents/Playground/tolaria`, gh authed, pnpm 10.33) — VPS pnpm 11 breaks the husky deps-check, so the VPS is a **deploy target only**.
+- [x] **0.6** Backup: VPS `feat/web-layer` branch retains the raw Hermes prototype; origin/main carries the docs.
 
-## Phase 1 — Refactor into a clean additive layer  *(next)*
+> **Development workflow (locked):** the upstream `.husky/pre-push` forces **`main → main` only** and runs the full gauntlet (codacy → eslint → tsc+vite build → vitest coverage ≥70% → playwright smoke; Rust skips when `src-tauri/` untouched). Therefore our layer lives on the **fork's `main`**, developed locally, pushed only when gauntlet-green. Docs-only pushes auto-skip app checks. See `PHASE-1-SEED.md`.
+
+## Phase 1 — Refactor into a clean additive layer  *(in progress — seed spec written)*
 
 - [ ] **1.1** Create `packages/web` workspace package with its own `vite.config.ts` + `tsconfig.json` + `index.html`
 - [ ] **1.2** Write `tauriShim.ts` (`invoke` → `webTransport`) + plugin stubs; prove the alias intercepts `@tauri-apps/api/core`

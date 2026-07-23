@@ -41,10 +41,8 @@ pnpm install && pnpm build && pnpm test
 
 Because every file we own is **additive** (new path, or a Vite alias — never an edit to `src/*`), upstream merges are effectively conflict-free. The one upstream file we may touch is `vite.config.ts`; we minimize that by doing all web wiring in `packages/web/vite.config.ts` instead.
 
-## Push access (action needed)
+## Push access (resolved 2026-07-23)
 
-The VPS can **read** `totnormal/tolaria` but not **push** (the `github_tolaria` deploy key is scoped to `tolaria-vault`, the vault repo). To enable `git push` from the VPS, do **one** of:
-1. Add `/root/.ssh/github_tolaria.pub` (or a new key) as a **deploy key** on `github.com/totnormal/tolaria` (Settings → Deploy keys, allow write), **or**
-2. Provide a GitHub PAT (scope `repo`) to store in a gitignored `web-layer/deploy/.env`.
+Push works **from the local Mac** (gh authenticated as `totnormal`, HTTPS). Deploy key `tolaria_app_ed25519` was generated on the VPS and added to `totnormal/tolaria` (write). Docs were pushed to `origin/main` (`e3c9b281`).
 
-Until then, commits stay local on the VPS (protected) and push when auth is in place.
+**Note:** the upstream `.husky/pre-push` runs a full local CI gauntlet and forces `main → main`. The VPS runs pnpm 11 (corepack) whose strict build-script policy (`ERR_PNPM_IGNORED_BUILDS`) breaks that gauntlet, so **develop and push from the local Mac** (`pnpm 10.33`); treat the VPS as a deploy target. The fork's `main` carries our additive layer; `upstream/main` merges in cleanly.
