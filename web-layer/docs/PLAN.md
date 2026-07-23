@@ -19,15 +19,16 @@ Phased roadmap. Status legend: `[ ]` todo · `[~]` in progress · `[x]` done · 
 
 ## Phase 1 — Refactor into a clean additive layer  *(in progress — seed spec written)*
 
-- [ ] **1.1** Create `packages/web` workspace package with its own `vite.config.ts` + `tsconfig.json` + `index.html`
+- [ ] **1.1** Create `packages/web` workspace package with its own `vite.config.ts` + `tsconfig.json` + `index.html`  *(next slice)*
 - [ ] **1.2** Write `tauriShim.ts` (`invoke` → `webTransport`) + plugin stubs; prove the alias intercepts `@tauri-apps/api/core`
 - [ ] **1.3** Move `webTransport.ts`, `LoginPage.tsx` from `src/*` into `packages/web/src/*`; write `main-web.tsx` + `AuthGate.tsx`
-- [ ] **1.4** Revert the upstream-file edits (`src/App.tsx`, `src/main.tsx`, `src/mock-tauri/index.ts`, `vite.config.ts`, `src/hooks/useGlobalQuickLauncher.ts`) — restore them to upstream state so merges are clean
+- [ ] **1.4** Revert the upstream-file edits (`src/App.tsx`, `src/main.tsx`, `src/mock-tauri/index.ts`, `vite.config.ts`, `src/hooks/useGlobalQuickLauncher.ts`) — restore them to upstream state so merges are clean *(N/A locally: clone is already clean upstream; only relevant when reconciling the VPS tree)*
 - [ ] **1.5** `pnpm build` from `packages/web` produces a working `dist/` (no `@react-refresh`, minified)
 - [ ] **1.6** Remove the duplicated `vaultApiPlugin` from root `vite.config.ts`; server is the single source of truth
-- [ ] **1.7** Path-containment guard (`packages/server/src/security.ts`) on **every** vault/git handler; reject `..`/absolute
+- [x] **1.7** Path-containment guard (`packages/server/src/security.ts`) on **every** vault/git handler; reject `..`/absolute/symlink escapes — *TDD, 11 tests green (2026-07-23)*
 - [ ] **1.8** Set real secrets (gitignored `web-layer/deploy/.env`): `TOLARIA_JWT_SECRET`, `TOLARIA_ADMIN_PASSWORD`; rotate `users.json`
-- [ ] **1.9** First server tests (vitest): auth flow + path-guard rejection cases
+- [x] **1.9** First server tests (vitest): path-guard rejection cases — *security.test.ts (11 tests); auth-flow test deferred to 2.4*
+- [x] **1.0** Register `@tolaria/server` in the workspace; make the package biome+eslint+tsc clean; inherit Hermes' Express backend as the reviewed base — *committed (2026-07-23)*
 
 ## Phase 2 — Core remote functionality
 
