@@ -2,7 +2,7 @@
 
 Phased roadmap. Status legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked. Update this file every session — it is the source of truth for progress.
 
-> Engineering estimate: **~35–45% complete** as of 2026-07-23. Phase 0 protects + documents; Phases 1–5 build outward. Effort: S/M/L.
+> Engineering estimate: **~50% complete** as of 2026-07-24. Phase 0 ✅; Phase 1 ✅~90%; Phase 2 in progress (auth hardened). Phases 0 protects + documents; Phases 1–5 build outward. Effort: S/M/L.
 
 ---
 
@@ -17,14 +17,14 @@ Phased roadmap. Status legend: `[ ]` todo · `[~]` in progress · `[x]` done · 
 
 > **Development workflow (locked):** the upstream `.husky/pre-push` forces **`main → main` only** and runs the full gauntlet (codacy → eslint → tsc+vite build → vitest coverage ≥70% → playwright smoke; Rust skips when `src-tauri/` untouched). Therefore our layer lives on the **fork's `main`**, developed locally, pushed only when gauntlet-green. Docs-only pushes auto-skip app checks. See `PHASE-1-SEED.md`.
 
-## Phase 1 — Refactor into a clean additive layer  *(in progress — seed spec written)*
+## Phase 1 — Refactor into a clean additive layer  *(in progress)*
 
-- [ ] **1.1** Create `packages/web` workspace package with its own `vite.config.ts` + `tsconfig.json` + `index.html`  *(next slice)*
-- [ ] **1.2** Write `tauriShim.ts` (`invoke` → `webTransport`) + plugin stubs; prove the alias intercepts `@tauri-apps/api/core`
-- [ ] **1.3** Move `webTransport.ts`, `LoginPage.tsx` from `src/*` into `packages/web/src/*`; write `main-web.tsx` + `AuthGate.tsx`
-- [ ] **1.4** Revert the upstream-file edits (`src/App.tsx`, `src/main.tsx`, `src/mock-tauri/index.ts`, `vite.config.ts`, `src/hooks/useGlobalQuickLauncher.ts`) — restore them to upstream state so merges are clean *(N/A locally: clone is already clean upstream; only relevant when reconciling the VPS tree)*
-- [ ] **1.5** `pnpm build` from `packages/web` produces a working `dist/` (no `@react-refresh`, minified)
-- [ ] **1.6** Remove the duplicated `vaultApiPlugin` from root `vite.config.ts`; server is the single source of truth
+- [x] **1.1** Create `packages/web` workspace package with its own `vite.config.ts` + `tsconfig.json` + `index.html` — *scaffolded (`fa4f6dd9`)*
+- [x] **1.2** Write `tauriShim.ts` (`invoke` → `webTransport`) + plugin stubs; prove the alias intercepts `@tauri-apps/api/core` — *done + `tauriShim.test.ts` (`fa4f6dd9`)*
+- [x] **1.3** Move `webTransport.ts`, `LoginPage.tsx` into `packages/web/src/*`; write `main-web.tsx` + `AuthGate.tsx` — *done (`fa4f6dd9`)*
+- [ ] **1.4** Revert the upstream-file edits (`src/App.tsx`, `src/main.tsx`, `src/mock-tauri/index.ts`, `vite.config.ts`, `src/hooks/useGlobalQuickLauncher.ts`) — restore them to upstream state so merges are clean *(N/A on the Mac: clone is already clean upstream; only relevant when reconciling the VPS tree — the VPS `feat/web-layer`/`main` still carry these edits)*
+- [x] **1.5** `pnpm build` from `packages/web` produces a working `dist/` (no `@react-refresh`, minified) — *`packages/web/dist` + `packages/server/dist` build clean on Mac*
+- [~] **1.6** Remove the duplicated `vaultApiPlugin` from root `vite.config.ts`; server is the single source of truth — *N/A for the **web** build (the web `packages/web/vite.config.ts` already excludes it). Root `vite.config.ts` is the **desktop** app's dev/test harness (3481-commit history, coverage config); touching it risks the desktop gauntlet. Deferred unless desktop dev is migrated to the server too.*
 - [x] **1.7** Path-containment guard (`packages/server/src/security.ts`) on **every** vault/git handler; reject `..`/absolute/symlink escapes — *TDD, 11 tests green (2026-07-23)*
 - [ ] **1.8** Set real secrets (gitignored `web-layer/deploy/.env`): `TOLARIA_JWT_SECRET`, `TOLARIA_ADMIN_PASSWORD`; rotate `users.json`
 - [x] **1.9** First server tests (vitest): path-guard rejection cases — *security.test.ts (11 tests); auth-flow test deferred to 2.4*
@@ -35,7 +35,7 @@ Phased roadmap. Status legend: `[ ]` todo · `[~]` in progress · `[x]` done · 
 - [ ] **2.1** Replace junk seed vault with a clone of `totnormal/tolaria-vault` at `TOLARIA_VAULT_PATH`; verify the real notes list
 - [ ] **2.2** End-to-end git sync: commit/pull/push against the vault remote via deploy key; auto-commit on save (debounced)
 - [ ] **2.3** **AI bridge**: `packages/server/src/ai/bridge.ts` → headless `pi`, streaming tokens over WS; wire the frontend AI panel + model picker
-- [ ] **2.4** Harden auth: HttpOnly+SameSite cookie, refresh tokens, `express-rate-limit`, strict CSP, lock CORS to origin
+- [x] **2.4** Harden auth: HttpOnly+SameSite cookie, refresh endpoint, `express-rate-limit`, strict CSP (helmet), lock CORS to origin — *done (cookie replaces localStorage; 9 auth middleware tests)*
 - [ ] **2.5** Conciliate the desktop↔web concurrent-edit policy (last-writer-wins + conflict UI)
 
 ## Phase 3 — Production deployment
