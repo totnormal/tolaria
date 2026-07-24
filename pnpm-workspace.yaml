@@ -1,6 +1,7 @@
 packages:
   - mcp-server
   - packages/server
+  - packages/web
 
 ignoredBuiltDependencies:
   - esbuild
