@@ -13,6 +13,7 @@ const DATA_DIR =
 
 export interface ServerConfig {
 	port: number;
+	host: string;
 	dataDir: string;
 	vaults: {
 		defaultPath: string;
@@ -72,6 +73,7 @@ export function getConfig(): ServerConfig {
 
 	_config = {
 		port: parseInt(process.env.TOLARIA_PORT || "3200", 10),
+		host: process.env.TOLARIA_HOST || "127.0.0.1",
 		dataDir: DATA_DIR,
 		vaults: {
 			defaultPath:

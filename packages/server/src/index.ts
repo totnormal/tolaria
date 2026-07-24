@@ -98,7 +98,7 @@ if (isDev) {
 		"[tolaria-server] Dev mode — API only. Run Vite on :5202 for frontend.",
 	);
 } else {
-	const distPath = path.join(__dirname, "..", "..", "dist");
+	const distPath = path.join(__dirname, "..", "..", "web", "dist");
 	if (existsSync(distPath)) {
 		app.use(express.static(distPath));
 		app.get("*", (_req: Request, res: Response) => {
@@ -114,8 +114,8 @@ if (isDev) {
 
 // ── Boot ──────────────────────────────────────────────────────────────────
 
-app.listen(config.port, () => {
-	console.log(`[tolaria-server] Listening on http://localhost:${config.port}`);
+app.listen(config.port, config.host, () => {
+	console.log(`[tolaria-server] Listening on http://${config.host}:${config.port}`);
 	console.log(`[tolaria-server] Data directory: ${config.dataDir}`);
 	console.log(
 		`[tolaria-server] Auth enabled: ${config.auth.users.length > 0 ? "yes" : "no"}`,
