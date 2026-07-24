@@ -16,7 +16,9 @@ const LazyUpstreamApp = lazy(async () => {
   return { default: mod.default }
 })
 
-createRoot(document.getElementById('root')!).render(
+  const root = document.getElementById('root')
+  if (!root) throw new Error('Tolaria root element is missing')
+  createRoot(root).render(
   <Suspense fallback={<StartupShellFallback />}>
     <AuthGate>
       <LazyUpstreamApp />

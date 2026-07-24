@@ -9,7 +9,9 @@ export async function listen<T>(
   handler: EventCallback<T>,
 ): Promise<() => void> {
   if (!listeners.has(event)) listeners.set(event, new Set())
-  listeners.get(event)!.add(handler as EventCallback<unknown>)
+  const set = listeners.get(event)
+  if (!set) return
+  set.add(handler as EventCallback<unknown>)
 
   return () => {
     listeners.get(event)?.delete(handler as EventCallback<unknown>)

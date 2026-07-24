@@ -24,7 +24,7 @@ export class Channel<T> {
   #onmessage?: (data: T) => void
 
   constructor() {
-    this.#id = `channel_${Math.random().toString(36).slice(2)}`
+    this.#id = `channel_${crypto.randomUUID().slice(0, 8)}`
   }
 
   set onmessage(handler: ((data: T) => void) | undefined) {

@@ -26,6 +26,11 @@ export function getAuthToken(): string | null {
   return _authToken
 }
 
+/** Reset cached API availability (for testing or reconnection). */
+export function resetApiAvailability(): void {
+  _apiAvailable = null
+}
+
 // ── API availability check ───────────────────────────────────────────────
 
 async function checkApiAvailable(): Promise<boolean> {
@@ -40,45 +45,11 @@ async function checkApiAvailable(): Promise<boolean> {
   }
 }
 
-/** Reset cached API availability (for testing or reconnection). */
-export function resetApiAvailability(): void {
-  _apiAvailable = null
-}
-
-// ── Fetch helpers ────────────────────────────────────────────────────────
+// ── Auth headers ─────────────────────────────────────────────────────────
 
 function authHeaders(): Record<string, string> {
   const token = getAuthToken()
   return token ? { Authorization: `Bearer ${token}` } : {}
-}
-
-async function apiGet<T>(path: string, params?: Record<string, unknown>): Promise<T> {
-  const searchParams = params
-    ? '?' + new URLSearchParams(
-        Object.entries(params).map(([k, v]) => [k, String(v)])
-      ).toString()
-    : ''
-  const res = await fetch(`/api${path}${searchParams}`, {
-    headers: { ...authHeaders() },
-  })
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: res.statusText }))
-    throw new Error(err.error || `API error ${res.status}`)
-  }
-  return res.json()
-}
-
-async function apiPost<T>(path: string, body?: Record<string, unknown>): Promise<T> {
-  const res = await fetch(`/api${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeaders() },
-    body: body ? JSON.stringify(body) : undefined,
-  })
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: res.statusText }))
-    throw new Error(err.error || `API error ${res.status}`)
-  }
-  return res.json()
 }
 
 // ── Command routing ──────────────────────────────────────────────────────
@@ -96,94 +67,236 @@ async function routeCommand<T>(cmd: string, args?: Record<string, unknown>): Pro
 
   // ── Vault commands ─────────────────────────────────────────────────
   if (cmd === 'list_vault' || cmd === 'reload_vault') {
-    return apiPost<T>('/vault/list', { path: payload.path, reload: cmd === 'reload_vault' })
+    const res = await fetch('/api/vault/list', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({ path: payload.path, reload: cmd === 'reload_vault' }),
+    })
+    if (!res.ok) throw new Error((await res.json().catch(() => ({ error: res.statusText }))).error || `API error ${res.status}`)
+    return res.json()
   }
   if (cmd === 'get_note_content' || cmd === 'validate_note_content') {
-    const data = await apiGet<{ content: string }>('/api/vault/content', { path: payload.path as string })
+    const params = new URLSearchParams({ path: payload.path as string })
+    const res = await fetch(`/api/vault/content?${params}`, { headers: { ...authHeaders() } })
+    if (!res.ok) throw new Error((await res.json().catch(() => ({ error: res.statusText }))).error || `API error ${res.status}`)
+    const data = await res.json()
     return (cmd === 'validate_note_content' ? (data.content === payload.content) : data.content) as unknown as T
   }
   if (cmd === 'get_all_content') {
-    return apiGet<T>('/vault/all-content', { path: payload.path as string })
+    const params = new URLSearchParams({ path: payload.path as string })
+    const res = await fetch(`/api/vault/all-content?${params}`, { headers: { ...authHeaders() } })
+    if (!res.ok) throw new Error((await res.json().catch(() => ({ error: res.statusText }))).error || `API error ${res.status}`)
+    return res.json()
   }
   if (cmd === 'reload_vault_entry') {
-    return apiGet<T>('/vault/entry', { path: payload.path as string })
+    const params = new URLSearchParams({ path: payload.path as string })
+    const res = await fetch(`/api/vault/entry?${params}`, { headers: { ...authHeaders() } })
+    if (!res.ok) throw new Error((await res.json().catch(() => ({ error: res.statusText }))).error || `API error ${res.status}`)
+    return res.json()
   }
   if (cmd === 'save_note_content') {
-    return apiPost<T>('/vault/save', { path: payload.path, content: payload.content })
+    const res = await fetch('/api/vault/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({ path: payload.path, content: payload.content }),
+    })
+    if (!res.ok) throw new Error((await res.json().catch(() => ({ error: res.statusText }))).error || `API error ${res.status}`)
+    return res.json()
   }
   if (cmd === 'create_note_content') {
-    return apiPost<T>('/vault/create', { path: payload.path, content: payload.content })
+    const res = await fetch('/api/vault/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({ path: payload.path, content: payload.content }),
+    })
+    if (!res.ok) throw new Error((await res.json().catch(() => ({ error: res.statusText }))).error || `API error ${res.status}`)
+    return res.json()
   }
   if (cmd === 'rename_note') {
-    return apiPost<T>('/vault/rename', payload)
+    const res = await fetch('/api/vault/rename', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify(payload),
+    })
+    if (!res.ok) throw new Error((await res.json().catch(() => ({ error: res.statusText }))).error || `API error ${res.status}`)
+    return res.json()
   }
   if (cmd === 'rename_note_filename') {
-    return apiPost<T>('/vault/rename-filename', payload)
+    const res = await fetch('/api/vault/rename-filename', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify(payload),
+    })
+    if (!res.ok) throw new Error((await res.json().catch(() => ({ error: res.statusText }))).error || `API error ${res.status}`)
+    return res.json()
   }
   if (cmd === 'delete_note') {
-    return apiPost<T>('/vault/delete', { path: payload.path })
+    const res = await fetch('/api/vault/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({ path: payload.path }),
+    })
+    if (!res.ok) throw new Error((await res.json().catch(() => ({ error: res.statusText }))).error || `API error ${res.status}`)
+    return res.json()
   }
   if (cmd === 'search_vault') {
-    return apiGet<T>('/vault/search', {
+    const params = new URLSearchParams({
       vault_path: payload.vault_path as string,
       query: payload.query as string,
       exclude_frontmatter: payload.excludeFrontmatter ? 'true' : 'false',
     })
+    const res = await fetch(`/api/vault/search?${params}`, { headers: { ...authHeaders() } })
+    if (!res.ok) throw new Error((await res.json().catch(() => ({ error: res.statusText }))).error || `API error ${res.status}`)
+    return res.json()
   }
 
   // ── Git commands ───────────────────────────────────────────────────
   if (cmd === 'get_modified_files') {
-    return apiPost<T>('/git/status', { path: payload.path || payload.vault_path })
+    const res = await fetch('/api/git/status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({ path: payload.path || payload.vault_path }),
+    })
+    if (!res.ok) throw new Error((await res.json().catch(() => ({ error: res.statusText }))).error || `API error ${res.status}`)
+    return res.json()
   }
   if (cmd === 'get_file_diff') {
-    return apiPost<T>('/git/diff', payload)
+    const res = await fetch('/api/git/diff', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify(payload),
+    })
+    if (!res.ok) throw new Error((await res.json().catch(() => ({ error: res.statusText }))).error || `API error ${res.status}`)
+    return res.json()
   }
   if (cmd === 'get_file_diff_at_commit') {
-    return apiPost<T>('/git/diff', payload)
+    const res = await fetch('/api/git/diff', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify(payload),
+    })
+    if (!res.ok) throw new Error((await res.json().catch(() => ({ error: res.statusText }))).error || `API error ${res.status}`)
+    return res.json()
   }
   if (cmd === 'get_file_history') {
-    return apiPost<T>('/git/history', payload)
+    const res = await fetch('/api/git/history', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify(payload),
+    })
+    if (!res.ok) throw new Error((await res.json().catch(() => ({ error: res.statusText }))).error || `API error ${res.status}`)
+    return res.json()
   }
   if (cmd === 'get_vault_pulse') {
-    return apiPost<T>('/git/pulse', payload)
+    const res = await fetch('/api/git/pulse', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify(payload),
+    })
+    if (!res.ok) throw new Error((await res.json().catch(() => ({ error: res.statusText }))).error || `API error ${res.status}`)
+    return res.json()
   }
   if (cmd === 'git_commit') {
-    return apiPost<T>('/git/commit', payload)
+    const res = await fetch('/api/git/commit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify(payload),
+    })
+    if (!res.ok) throw new Error((await res.json().catch(() => ({ error: res.statusText }))).error || `API error ${res.status}`)
+    return res.json()
   }
   if (cmd === 'git_pull') {
-    return apiPost<T>('/git/pull', payload)
+    const res = await fetch('/api/git/pull', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify(payload),
+    })
+    if (!res.ok) throw new Error((await res.json().catch(() => ({ error: res.statusText }))).error || `API error ${res.status}`)
+    return res.json()
   }
   if (cmd === 'git_push') {
-    return apiPost<T>('/git/push', payload)
+    const res = await fetch('/api/git/push', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify(payload),
+    })
+    if (!res.ok) throw new Error((await res.json().catch(() => ({ error: res.statusText }))).error || `API error ${res.status}`)
+    return res.json()
   }
   if (cmd === 'git_remote_status') {
-    return apiPost<T>('/git/remote-status', payload)
+    const res = await fetch('/api/git/remote-status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify(payload),
+    })
+    if (!res.ok) throw new Error((await res.json().catch(() => ({ error: res.statusText }))).error || `API error ${res.status}`)
+    return res.json()
   }
   if (cmd === 'get_last_commit_info') {
-    return apiPost<T>('/git/last-commit', payload)
+    const res = await fetch('/api/git/last-commit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify(payload),
+    })
+    if (!res.ok) throw new Error((await res.json().catch(() => ({ error: res.statusText }))).error || `API error ${res.status}`)
+    return res.json()
   }
   if (cmd === 'git_author_identity') {
-    return apiPost<T>('/git/author-identity', payload)
+    const res = await fetch('/api/git/author-identity', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify(payload),
+    })
+    if (!res.ok) throw new Error((await res.json().catch(() => ({ error: res.statusText }))).error || `API error ${res.status}`)
+    return res.json()
   }
   if (cmd === 'git_file_url') {
-    return apiPost<T>('/git/file-url', payload)
+    const res = await fetch('/api/git/file-url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify(payload),
+    })
+    if (!res.ok) throw new Error((await res.json().catch(() => ({ error: res.statusText }))).error || `API error ${res.status}`)
+    return res.json()
   }
   if (cmd === 'is_git_repo' || cmd === 'git_workspace_info') {
-    return apiPost<T>('/git/is-repo', { path: payload.path || payload.vault_path })
+    const res = await fetch('/api/git/is-repo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({ path: payload.path || payload.vault_path }),
+    })
+    if (!res.ok) throw new Error((await res.json().catch(() => ({ error: res.statusText }))).error || `API error ${res.status}`)
+    return res.json()
   }
 
   // ── Settings commands ──────────────────────────────────────────────
   if (cmd === 'get_settings') {
-    return apiGet<T>('/settings')
+    const res = await fetch('/api/settings', { headers: { ...authHeaders() } })
+    if (!res.ok) throw new Error((await res.json().catch(() => ({ error: res.statusText }))).error || `API error ${res.status}`)
+    return res.json()
   }
   if (cmd === 'save_settings') {
-    return apiPost<T>('/settings', payload.settings || payload)
+    const res = await fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify(payload.settings || payload),
+    })
+    if (!res.ok) throw new Error((await res.json().catch(() => ({ error: res.statusText }))).error || `API error ${res.status}`)
+    return res.json()
   }
   if (cmd === 'load_vault_list') {
-    return apiGet<T>('/settings/vault-list')
+    const res = await fetch('/api/settings/vault-list', { headers: { ...authHeaders() } })
+    if (!res.ok) throw new Error((await res.json().catch(() => ({ error: res.statusText }))).error || `API error ${res.status}`)
+    return res.json()
   }
   if (cmd === 'save_vault_list') {
-    return apiPost<T>('/settings/vault-list', payload)
+    const res = await fetch('/api/settings/vault-list', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify(payload),
+    })
+    if (!res.ok) throw new Error((await res.json().catch(() => ({ error: res.statusText }))).error || `API error ${res.status}`)
+    return res.json()
   }
 
   return undefined
@@ -211,7 +324,13 @@ export async function webInvoke<T>(cmd: string, args?: Record<string, unknown>):
  * Login to the web API server.
  */
 export async function login(username: string, password: string): Promise<void> {
-  const data = await apiPost<{ token: string }>('/auth/login', { username, password })
+  const res = await fetch('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
+  })
+  if (!res.ok) throw new Error((await res.json().catch(() => ({ error: res.statusText }))).error || `API error ${res.status}`)
+  const data = await res.json()
   setAuthToken(data.token)
 }
 
