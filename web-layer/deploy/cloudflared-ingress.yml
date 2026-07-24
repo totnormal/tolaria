@@ -1,0 +1,4 @@
+# Append this ingress block to /root/.cloudflared/config.yml ABOVE the final
+# catch-all (`- service: http_status:404`) entry, then restart cloudflared.
+  - hostname: tolaria.tarnovski.com
+    service: http://127.0.0.1:80

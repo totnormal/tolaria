@@ -1,0 +1,18 @@
+[Unit]
+Description=Tolaria Web (Express API server, tsx runtime)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/tolaria-web/packages/server
+EnvironmentFile=/etc/tolaria-web.env
+ExecStart=/usr/bin/node node_modules/tsx/dist/cli.mjs src/index.ts
+Restart=always
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
