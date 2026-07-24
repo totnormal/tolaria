@@ -73,7 +73,9 @@ async function routeCommand<T>(cmd: string, args?: Record<string, unknown>): Pro
 
   // ── Vault commands ─────────────────────────────────────────────────
   if (cmd === 'list_vault' || cmd === 'reload_vault') {
-    const res = await fetch('/api/vault/list', postInit({ path: payload.path, reload: cmd === 'reload_vault' }))
+    const params = new URLSearchParams({ path: payload.path as string })
+    if (cmd === 'reload_vault') params.set('reload', 'true')
+    const res = await fetch(`/api/vault/list?${params}`, withCreds())
     if (!res.ok) throw new Error(await readError(res))
     return res.json()
   }

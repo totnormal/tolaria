@@ -36,24 +36,18 @@ describe('webTransport', () => {
   })
 
   describe('webInvoke — vault commands', () => {
-    it('routes list_vault to POST /api/vault/list', async () => {
+    it('routes list_vault to GET /api/vault/list?path=', async () => {
       fetchSpy.mockResolvedValueOnce(mockFetchJson({ status: 'ok' })) // health
       fetchSpy.mockResolvedValueOnce(mockFetchJson({ notes: [{ path: 'test.md', title: 'Test' }] }))
 
       const result = await webInvoke('list_vault', { path: '/vault' } as never)
 
       expect(result).toEqual({ notes: [{ path: 'test.md', title: 'Test' }] })
-      expect(fetchSpy).toHaveBeenLastCalledWith(
-        '/api/vault/list',
-        expect.objectContaining({
-          method: 'POST',
-        })
-      )
-      // Body includes path + reload:false
-      const lastCall = fetchSpy.mock.calls[fetchSpy.mock.calls.length - 1]
-      const body = JSON.parse(lastCall[1].body)
-      expect(body.path).toBe('/vault')
-      expect(body.reload).toBe(false)
+      const lastCall = fetchSpy.mock.calls[fetchSpy.mock.calls.length - 1] as unknown as [string, RequestInit]
+      expect(lastCall[0]).toContain('/api/vault/list?path=')
+      expect(lastCall[0]).toContain('vault')
+      expect(lastCall[1]).toMatchObject({ credentials: 'include' })
+      expect(lastCall[1].method).toBeUndefined() // default GET
     })
 
     it('routes save_note_content to POST /api/vault/save', async () => {
