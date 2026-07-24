@@ -12,8 +12,10 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import type { Request, Response } from "express";
 import express from "express";
+import helmet from "helmet";
 import { getConfig } from "./middleware/config.ts";
 import authRoutes from "./routes/auth.ts";
 import gitRoutes from "./routes/git.ts";
@@ -26,7 +28,50 @@ const config = getConfig();
 
 // ── Middleware ────────────────────────────────────────────────────────────
 
-app.use(cors({ origin: true, credentials: true }));
+// Behind nginx + Cloudflare — trust one proxy hop so req.ip / rate-limit see
+// the real client and secure cookies work over the https→http edge.
+app.set("trust proxy", 1);
+
+const isDev = process.env.TOLARIA_DEV === "true";
+
+// Security headers + a strict CSP in prod (skipped in dev so Vite HMR works).
+app.use(
+	helmet({
+		contentSecurityPolicy: isDev
+			? false
+			: {
+					directives: {
+						defaultSrc: ["'self'"],
+						scriptSrc: ["'self'"],
+						styleSrc: ["'self'", "'unsafe-inline'"],
+						imgSrc: ["'self'", "data:", "blob:", "https:"],
+						fontSrc: ["'self'", "data:"],
+						connectSrc: ["'self'", "ws:", "wss:"],
+						mediaSrc: ["'self'", "data:", "blob:"],
+						objectSrc: ["'none'"],
+						baseUri: ["'self'"],
+						formAction: ["'self'"],
+						frameAncestors: ["'none'"],
+					},
+				},
+		crossOriginEmbedderPolicy: false,
+		crossOriginResourcePolicy: { policy: "same-site" },
+	}),
+);
+
+app.use(cookieParser());
+
+// CORS: locked to a configured origin in prod (same-origin via nginx needs no
+// CORS at all). In dev, reflect the request origin so Vite (:5202) may talk to
+// the API (:3200) with credentials.
+const allowedOrigin = process.env.TOLARIA_WEB_ORIGIN;
+app.use(
+	cors({
+		origin: isDev ? true : allowedOrigin ? allowedOrigin.split(",") : false,
+		credentials: true,
+	}),
+);
+
 app.use(express.json({ limit: "10mb" }));
 
 // ── API Routes ───────────────────────────────────────────────────────────
@@ -47,8 +92,6 @@ app.get("/api/health", (_req: Request, res: Response) => {
 });
 
 // ── Frontend serving ─────────────────────────────────────────────────────
-
-const isDev = process.env.TOLARIA_DEV === "true";
 
 if (isDev) {
 	console.log(

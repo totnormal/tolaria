@@ -2,7 +2,7 @@
  * Tests for webTransport — the REST client that replaces @tauri-apps/api/core invoke.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { webInvoke, setAuthToken, getAuthToken, login, resetApiAvailability } from './webTransport'
+import { webInvoke, login, logout, isAuthenticated, resetApiAvailability } from './webTransport'
 
 function mockFetchJson(data: unknown, _ok?: boolean, status = 200) {
   void _ok
@@ -27,7 +27,6 @@ describe('webTransport', () => {
     // Assign directly to globalThis — vi.stubGlobal may not propagate to ESM modules
     globalThis.fetch = fetchSpy as typeof fetch
     resetApiAvailability()
-    setAuthToken(null)
   })
 
   afterEach(() => {
@@ -147,32 +146,47 @@ describe('webTransport', () => {
     })
   })
 
-  describe('auth token management', () => {
-    it('setAuthToken stores token and getAuthToken retrieves it', () => {
-      setAuthToken('my-jwt-token')
-      expect(getAuthToken()).toBe('my-jwt-token')
-      setAuthToken(null)
-    })
-
-    it('login calls POST /api/auth/login and stores token', async () => {
-      // Use URL-based routing instead of mock chaining — avoids order sensitivity
+  describe('auth (cookie-based)', () => {
+    it('login POSTs /api/auth/login with credentials included and stores no token', async () => {
       fetchSpy.mockImplementation((url: string) => {
-        if (url === '/api/health') return mockFetchJson({ status: 'ok' })
-        if (url === '/api/auth/login') return mockFetchJson({ token: 'jwt-abc' })
+        if (url === '/api/auth/login') return mockFetchJson({ user: { userId: 'admin' } })
         return mockFetchJson({ error: 'unexpected' }, false, 404)
       })
 
       await login('admin', 'password')
 
-      // Verify login endpoint was called
-      expect(fetchSpy).toHaveBeenCalledWith(
-        '/api/auth/login',
-        expect.objectContaining({ method: 'POST' })
-      )
-      // Verify token was stored
-      expect(getAuthToken()).toBe('jwt-abc')
+      const call = fetchSpy.mock.calls.find((c) => c[0] === '/api/auth/login') as unknown as [string, RequestInit]
+      expect(call).toBeDefined()
+      expect(call[1]).toMatchObject({ method: 'POST', credentials: 'include' })
+      expect(JSON.parse(String(call[1].body))).toEqual({ username: 'admin', password: 'password' })
+    })
 
-      setAuthToken(null)
+    it('logout POSTs /api/auth/logout with credentials included', async () => {
+      fetchSpy.mockResolvedValue(mockFetchJson({ ok: true }))
+
+      await logout()
+
+      const call = fetchSpy.mock.calls.find((c) => c[0] === '/api/auth/logout') as unknown as [string, RequestInit]
+      expect(call).toBeDefined()
+      expect(call[1]).toMatchObject({ method: 'POST', credentials: 'include' })
+    })
+
+    it('isAuthenticated returns true on 200 from /api/auth/me', async () => {
+      fetchSpy.mockImplementation((url: string) => {
+        if (url === '/api/auth/me') return mockFetchJson({ user: { userId: 'admin' } })
+        return mockFetchJson({ error: 'no' }, false, 404)
+      })
+
+      expect(await isAuthenticated()).toBe(true)
+    })
+
+    it('isAuthenticated returns false on 401 from /api/auth/me', async () => {
+      fetchSpy.mockImplementation((url: string) => {
+        if (url === '/api/auth/me') return mockFetchJson({ error: 'unauthorized' }, false, 401)
+        return mockFetchJson({ error: 'no' }, false, 404)
+      })
+
+      expect(await isAuthenticated()).toBe(false)
     })
   })
 })

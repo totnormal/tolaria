@@ -53,7 +53,6 @@ export function convertFileSrc(filePath: string, protocol = 'asset'): string {
 export {
   login,
   logout,
-  setAuthToken,
-  getAuthToken,
-  isWebAvailable,
+  isAuthenticated,
+  isApiAvailable,
 } from './webTransport'
