@@ -26,7 +26,7 @@ Phased roadmap. Status legend: `[ ]` todo · `[~]` in progress · `[x]` done · 
 - [x] **1.5** `pnpm build` from `packages/web` produces a working `dist/` (no `@react-refresh`, minified) — *`packages/web/dist` + `packages/server/dist` build clean on Mac*
 - [~] **1.6** Remove the duplicated `vaultApiPlugin` from root `vite.config.ts`; server is the single source of truth — *N/A for the **web** build (the web `packages/web/vite.config.ts` already excludes it). Root `vite.config.ts` is the **desktop** app's dev/test harness (3481-commit history, coverage config); touching it risks the desktop gauntlet. Deferred unless desktop dev is migrated to the server too.*
 - [x] **1.7** Path-containment guard (`packages/server/src/security.ts`) on **every** vault/git handler; reject `..`/absolute/symlink escapes — *TDD, 11 tests green (2026-07-23)*
-- [ ] **1.8** Set real secrets (gitignored `web-layer/deploy/.env`): `TOLARIA_JWT_SECRET`, `TOLARIA_ADMIN_PASSWORD`; rotate `users.json`
+- [x] **1.8** Set real secrets (`/etc/tolaria-web.env`, chmod 600): `TOLARIA_JWT_SECRET` + `TOLARIA_ADMIN_PASSWORD` set on VPS; `users.json` rotated — *done 2026-07-24*
 - [x] **1.9** First server tests (vitest): path-guard rejection cases — *security.test.ts (11 tests); auth-flow test deferred to 2.4*
 - [x] **1.0** Register `@tolaria/server` in the workspace; make the package biome+eslint+tsc clean; inherit Hermes' Express backend as the reviewed base — *committed (2026-07-23)*
 
@@ -38,13 +38,13 @@ Phased roadmap. Status legend: `[ ]` todo · `[~]` in progress · `[x]` done · 
 - [x] **2.4** Harden auth: HttpOnly+SameSite cookie, refresh endpoint, `express-rate-limit`, strict CSP (helmet), lock CORS to origin — *done (cookie replaces localStorage; 9 auth middleware tests)*
 - [ ] **2.5** Conciliate the desktop↔web concurrent-edit policy (last-writer-wins + conflict UI)
 
-## Phase 3 — Production deployment
+## Phase 3 — Production deployment  *(mostly done 2026-07-24)*
 
-- [ ] **3.1** **Fix the 526**: add `tolaria.tarnovski.com → http://127.0.0.1:80` to `/root/.cloudflared/config.yml`; restart cloudflared; verify `https://` → 200
-- [ ] **3.2** `tolaria-web.service` systemd unit (build from `dist/`, `Restart=always`, `EnvironmentFile`); stop the Hermes-spawned dev processes
-- [ ] **3.3** Bind app ports to `127.0.0.1` only; confirm no public `:5202/:3200`; optional Cloudflare Access in front
+- [~] **3.1** **Fix the 526**: add `tolaria.tarnovski.com → http://127.0.0.1:80` to `/root/.cloudflared/config.yml` + restart cloudflared — *ingress added; **DNS CNAME pending** (manual Cloudflare step, no API token on VPS) — see `web-layer/docs/GO-LIVE.md`*
+- [x] **3.2** `tolaria-web.service` systemd unit (tsx runtime, `Restart=always`, `EnvironmentFile=/etc/tolaria-web.env`); zombie Hermes-spawned dev processes stopped — *done*
+- [x] **3.3** Bind app port to `127.0.0.1` only (`TOLARIA_HOST`); confirmed `:3200` not publicly reachable; nginx fronts everything — *done*
 - [ ] **3.4** Observability: structured logs (`pino`), deep `/api/health`, log rotation, alert on restart loop
-- [ ] **3.5** Deploy pipeline: `.github/workflows/deploy-web.yml` (build → ssh → restart)
+- [ ] **3.5** Deploy pipeline: `.github/workflows/deploy-web.yml` (build → ssh → restart) — *currently manual rsync of `packages/{server/src,web/dist}` to `/opt/tolaria-web`*
 
 ## Phase 4 — PWA + mobile UX
 
